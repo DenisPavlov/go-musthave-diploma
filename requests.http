@@ -1,0 +1,93 @@
+### Регистрация
+POST http://localhost:8080/api/user/register
+Content-Type: application/json
+
+{
+  "login": "denis2",
+  "password": "secret"
+}
+
+###
+
+### Создание заказа
+POST localhost:8080/api/user/orders
+Content-Type: text/plain
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTQzMDE3MjUsImlhdCI6MTc1NDIxNTMyNSwic3ViIjoiZGVuaXMyIn0.3LYlbF3n9Q4GirzSHGYvrLoIx4ADu2gs1Uc8LG6jaiM
+
+79927398713
+
+### валидные номера
+79927398713
+1234561239
+2377225624
+###
+
+### Получение заказов пользователя
+GET localhost:8080/api/user/orders
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTQzMDE3MjUsImlhdCI6MTc1NDIxNTMyNSwic3ViIjoiZGVuaXMyIn0.3LYlbF3n9Q4GirzSHGYvrLoIx4ADu2gs1Uc8LG6jaiM
+
+###
+
+### получение баланса
+GET localhost:8080/api/user/balance
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTQzMDE3MjUsImlhdCI6MTc1NDIxNTMyNSwic3ViIjoiZGVuaXMyIn0.3LYlbF3n9Q4GirzSHGYvrLoIx4ADu2gs1Uc8LG6jaiM
+
+### списание бонусов
+POST localhost:8080/api/user/balance/withdraw
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTQzMDE3MjUsImlhdCI6MTc1NDIxNTMyNSwic3ViIjoiZGVuaXMyIn0.3LYlbF3n9Q4GirzSHGYvrLoIx4ADu2gs1Uc8LG6jaiM
+
+{
+  "order": "79927398713",
+  "sum": 100
+}
+
+###
+
+### получить все списания с бонусами
+GET http://localhost:8080/api/user/withdrawals
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTQzMDE3MjUsImlhdCI6MTc1NDIxNTMyNSwic3ViIjoiZGVuaXMyIn0.3LYlbF3n9Q4GirzSHGYvrLoIx4ADu2gs1Uc8LG6jaiM
+
+
+### Логин
+POST http://localhost:8080/api/user/login
+Content-Type: application/json
+
+{
+  "login": "denis2",
+  "password": "secret"
+}
+###
+
+
+### accural
+### Создать заказ
+POST localhost:8081/api/orders
+Content-Type: application/json
+
+{
+  "order": "1234561239",
+  "goods": [
+    {
+      "description": "Чайник Bork",
+      "price": 7000
+    },
+    {
+      "description": "Плита Bosh",
+      "price": 25000
+    }
+  ]
+}
+
+### матчер
+POST localhost:8081/api/goods
+Content-Type: application/json
+
+{
+  "match": "Bork",
+  "reward": 10,
+  "reward_type": "%"
+}
+
+### Получить статус
+GET localhost:8081/api/orders/1234561239
