@@ -15,11 +15,11 @@
 - `go install github.com/vektra/mockery/v3@v3.5.1`
 - `mockery`
 
-# ОБРАТИТЬ ВНИМАНИЕ
+# Запуск сервиса расчета скидок
+`./cmd/accrual/accrual_linux_amd64 --a=localhost:8081`
 
-- адрес и порт запуска сервиса: переменная окружения ОС RUN_ADDRESS или флаг -a;
-- адрес подключения к базе данных: переменная окружения ОС DATABASE_URI или флаг -d;
-- адрес системы расчёта начислений: переменная окружения ОС ACCRUAL_SYSTEM_ADDRESS или флаг -r.****
+# Запуск приложения
+`go run cmd/gophermart/main.go`
 
 # go-musthave-diploma-tpl
 

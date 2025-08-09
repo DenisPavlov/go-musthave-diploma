@@ -1,10 +1,11 @@
 package config
 
 import (
-	"github.com/spf13/pflag"
-	"github.com/spf13/viper"
 	"log"
 	"time"
+
+	"github.com/spf13/pflag"
+	"github.com/spf13/viper"
 )
 
 type Config struct {
@@ -44,7 +45,7 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("server.writeTimeout", 5*time.Second)
 	v.SetDefault("server.idleTimeout", 60*time.Second)
 	v.SetDefault("databaseUri", "postgresql://postgres:postgres@localhost:55432/gophermart?sslmode=disable")
-	v.SetDefault("accrualSystemAddress", "localhost:8081")
+	v.SetDefault("accrualSystemAddress", "http://localhost:8081")
 
 }
 

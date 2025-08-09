@@ -1,10 +1,12 @@
 package main
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"os"
 
+	"github.com/DenisPavlov/go-musthave-diploma/internal/client/accrual"
 	"github.com/DenisPavlov/go-musthave-diploma/internal/config"
 	addOrders "github.com/DenisPavlov/go-musthave-diploma/internal/http-server/handlers/orders/add"
 	getOrders "github.com/DenisPavlov/go-musthave-diploma/internal/http-server/handlers/orders/get"
@@ -16,6 +18,7 @@ import (
 	"github.com/DenisPavlov/go-musthave-diploma/internal/http-server/middleware/auth"
 	mwLogger "github.com/DenisPavlov/go-musthave-diploma/internal/http-server/middleware/logger"
 	"github.com/DenisPavlov/go-musthave-diploma/internal/logger"
+	"github.com/DenisPavlov/go-musthave-diploma/internal/service/order"
 	ordersStorage "github.com/DenisPavlov/go-musthave-diploma/internal/storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -62,6 +65,16 @@ func main() {
 		r.Get("/withdrawals", withdrawals.New(log, storage))
 	})
 
+	accrualClient := accrual.NewClient(log, cfg)
+	orderProcessor := order.NewProcessor(log, accrualClient, storage)
+
+	go func() {
+		if err = orderProcessor.ProcessNewOrders(context.Background(), 10, 5); err != nil {
+			log.Error("error processing orders", logger.Err(err))
+			os.Exit(1)
+		}
+	}()
+
 	// start server
 	log.Info("server starting", slog.String("address", cfg.RunAddress))
 	srv := &http.Server{
@@ -75,5 +88,7 @@ func main() {
 	if err := srv.ListenAndServe(); err != nil {
 		log.Error("failed to start server", logger.Err(err))
 	}
+
+	// todo - add graceful shutdown
 
 }

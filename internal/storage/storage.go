@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/DenisPavlov/go-musthave-diploma/internal/config"
-	"github.com/DenisPavlov/go-musthave-diploma/internal/http-server/handlers/orders/get"
 	getBalance "github.com/DenisPavlov/go-musthave-diploma/internal/http-server/handlers/user/balance/get"
 	"github.com/DenisPavlov/go-musthave-diploma/internal/http-server/handlers/user/withdrawals"
+	"github.com/DenisPavlov/go-musthave-diploma/internal/model"
 	"github.com/lib/pq"
 
 	"golang.org/x/crypto/bcrypt"
@@ -100,12 +100,11 @@ func (s *Storage) Close() error {
 	return s.db.Close()
 }
 
-// todo - добавить еще рассчитанную скидку в ответ
-func (s *Storage) GetAllOrders(ctx context.Context, username string) ([]get.Order, error) {
+func (s *Storage) GetAllOrders(ctx context.Context, username string) ([]model.Order, error) {
 	op := "storage.GetAllOrders"
-	s.log.Debug("getting all orders", slog.String("username", username))
+	s.log.DebugContext(ctx, "getting all orders", slog.String("username", username))
 
-	var orders []get.Order
+	var orders []model.Order
 
 	stmt, err := s.db.Prepare("SELECT number, status, uploaded_at, accrual FROM orders WHERE username=$1")
 	if err != nil {
@@ -124,7 +123,7 @@ func (s *Storage) GetAllOrders(ctx context.Context, username string) ([]get.Orde
 	}()
 
 	for rows.Next() {
-		var order get.Order
+		var order model.Order
 		if err := rows.Scan(&order.Number, &order.Status, &order.UploadedAt, &order.Accrual); err != nil {
 			return orders, fmt.Errorf("failed to scan row: %s %w", op, err)
 		}
@@ -140,7 +139,7 @@ func (s *Storage) GetAllOrders(ctx context.Context, username string) ([]get.Orde
 func (s *Storage) AddOrder(ctx context.Context, orderNum string, username string) error {
 	op := "storage.AddOrder"
 
-	s.log.Debug("adding order", slog.String("orderNum", orderNum), slog.String("username", username))
+	s.log.DebugContext(ctx, "adding order", slog.String("orderNum", orderNum), slog.String("username", username))
 	stmt, err := s.db.Prepare("INSERT INTO orders (number, username, status, uploaded_at) VALUES ($1, $2, $3, $4)")
 	if err != nil {
 		return fmt.Errorf("failed to prepare statement: %s %w", op, err)
@@ -149,7 +148,7 @@ func (s *Storage) AddOrder(ctx context.Context, orderNum string, username string
 		_ = stmt.Close()
 	}()
 
-	_, err = stmt.ExecContext(ctx, orderNum, username, "NEW", time.Now()) // todo - переделать status в ENUM
+	_, err = stmt.ExecContext(ctx, orderNum, username, model.StatusNew, time.Now())
 	if err != nil {
 		var pgErr *pq.Error
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {
@@ -169,6 +168,62 @@ func (s *Storage) AddOrder(ctx context.Context, orderNum string, username string
 	}
 
 	return nil
+}
+
+func (s *Storage) UpdateOrder(ctx context.Context, order model.Order) error {
+	op := "storage.UpdateOrder"
+
+	s.log.DebugContext(ctx, "updating order", slog.Any("order", order))
+	stmt, err := s.db.Prepare("UPDATE orders SET status = $1, accrual = $2 WHERE number = $3")
+	if err != nil {
+		return fmt.Errorf("failed to prepare statement: %s %w", op, err)
+	}
+	defer func() {
+		_ = stmt.Close()
+	}()
+
+	_, err = stmt.ExecContext(ctx, order.Status, order.Accrual, order.Number)
+	if err != nil {
+		return fmt.Errorf("failed to execute statement: %s %w", op, err)
+	}
+	return nil
+}
+
+func (s *Storage) GetNewOrders(ctx context.Context, limit int) ([]model.Order, error) {
+	op := "storage.GetNewOrders"
+	s.log.DebugContext(ctx, "getting new orders", slog.Int("limit", limit))
+
+	var orders []model.Order
+
+	stmt, err := s.db.Prepare("SELECT number, status, uploaded_at, accrual FROM orders WHERE status=$1")
+	if err != nil {
+		return orders, fmt.Errorf("failed to prepare statement: %s %w", op, err)
+	}
+	defer func() {
+		_ = stmt.Close()
+	}()
+
+	rows, err := stmt.QueryContext(ctx, model.StatusNew)
+	if err != nil {
+		return orders, fmt.Errorf("failed to query statement: %s %w", op, err)
+	}
+	defer func() {
+		_ = rows.Close()
+	}()
+
+	for rows.Next() {
+		var order model.Order
+		if err := rows.Scan(&order.Number, &order.Status, &order.UploadedAt, &order.Accrual); err != nil {
+			return orders, fmt.Errorf("failed to scan row: %s %w", op, err)
+		}
+		orders = append(orders, order)
+	}
+	if err := rows.Err(); err != nil {
+		return orders, fmt.Errorf("failed to iterate rows: %w", err)
+	}
+
+	return orders, nil
+
 }
 
 func (s *Storage) AddUser(ctx context.Context, username string, password string) error {

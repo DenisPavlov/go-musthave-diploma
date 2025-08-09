@@ -3,7 +3,7 @@ POST http://localhost:8080/api/user/register
 Content-Type: application/json
 
 {
-  "login": "denis2",
+  "login": "denis",
   "password": "secret"
 }
 
@@ -12,9 +12,9 @@ Content-Type: application/json
 ### Создание заказа
 POST localhost:8080/api/user/orders
 Content-Type: text/plain
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTQzMDE3MjUsImlhdCI6MTc1NDIxNTMyNSwic3ViIjoiZGVuaXMyIn0.3LYlbF3n9Q4GirzSHGYvrLoIx4ADu2gs1Uc8LG6jaiM
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTQ4MDU1NDgsImlhdCI6MTc1NDcxOTE0OCwic3ViIjoiZGVuaXMifQ.GdO04Bw9tTL2RQF0xDXdCwyC0h_q-Fc7VN0L38cCG-A
 
-79927398713
+8066874253548
 
 ### валидные номера
 79927398713
@@ -66,7 +66,7 @@ POST localhost:8081/api/orders
 Content-Type: application/json
 
 {
-  "order": "1234561239",
+  "order": "8066874253548",
   "goods": [
     {
       "description": "Чайник Bork",
@@ -90,4 +90,4 @@ Content-Type: application/json
 }
 
 ### Получить статус
-GET localhost:8081/api/orders/1234561239
+GET localhost:8081/api/orders/8066874253548

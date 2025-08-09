@@ -2,10 +2,11 @@ package auth
 
 import (
 	"context"
-	"github.com/DenisPavlov/go-musthave-diploma/internal/utils"
-	"github.com/go-chi/render"
 	"log/slog"
 	"net/http"
+
+	"github.com/DenisPavlov/go-musthave-diploma/internal/utils"
+	"github.com/go-chi/render"
 )
 
 type ctxUsernameKey int
@@ -24,7 +25,7 @@ func New(log *slog.Logger) func(next http.Handler) http.Handler {
 			if authHeader == "" {
 				msg := "Authorization header is required"
 				log.Debug(msg)
-				render.Status(r, http.StatusBadRequest)
+				render.Status(r, http.StatusUnauthorized)
 				render.PlainText(w, r, msg)
 				return
 			}

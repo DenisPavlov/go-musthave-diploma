@@ -2,25 +2,18 @@ package get
 
 import (
 	"context"
-	"github.com/DenisPavlov/go-musthave-diploma/internal/http-server/middleware/auth"
-	"github.com/DenisPavlov/go-musthave-diploma/internal/logger"
-	"github.com/go-chi/chi/v5/middleware"
-	"github.com/go-chi/render"
 	"log/slog"
 	"net/http"
-	"time"
+
+	"github.com/DenisPavlov/go-musthave-diploma/internal/http-server/middleware/auth"
+	"github.com/DenisPavlov/go-musthave-diploma/internal/logger"
+	"github.com/DenisPavlov/go-musthave-diploma/internal/model"
+	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/render"
 )
 
 type OrderGetter interface {
-	GetAllOrders(ctx context.Context, username string) ([]Order, error)
-}
-
-// todo - переместить куда-от?
-type Order struct {
-	Number     string    `json:"number"`
-	Status     string    `json:"status"`
-	Accrual    int       `json:"accrual,omitempty"`
-	UploadedAt time.Time `json:"uploaded_at"`
+	GetAllOrders(ctx context.Context, username string) ([]model.Order, error)
 }
 
 func New(log *slog.Logger, getter OrderGetter) http.HandlerFunc {
