@@ -51,7 +51,7 @@ func InitStorage(log *slog.Logger, cfg *config.Config) (*Storage, error) {
 		return nil, fmt.Errorf("failed to ping db: %s %w", op, err)
 	}
 
-	if err := applyMigrations(db); err != nil {
+	if err := ApplyMigrations(db, log); err != nil {
 		return nil, fmt.Errorf("failed to apply migrations: %s %w", op, err)
 	}
 
@@ -59,41 +59,6 @@ func InitStorage(log *slog.Logger, cfg *config.Config) (*Storage, error) {
 		log: log.With("component", "storage"),
 		db:  db,
 	}, nil
-}
-
-// applyMigrations применяет миграции к БД
-// Здесь можно использовать инструменты миграций
-func applyMigrations(db *sql.DB) error {
-	op := "storage.applyMigrations"
-
-	// временное решение пока такое
-	migrations := []string{
-		`CREATE TABLE IF NOT EXISTS orders (
-			number      TEXT PRIMARY KEY,
-			username    TEXT NOT NULL,
-			status      TEXT NOT NULL,
-			uploaded_at TIMESTAMP NOT NULL,
-			accrual     DECIMAL DEFAULT 0
-		)`,
-		`CREATE TABLE IF NOT EXISTS users (
-			username      TEXT PRIMARY KEY,
-			password_hash TEXT NOT NULL
-		)`,
-		`CREATE TABLE IF NOT EXISTS withdrawal(
-    		order_number TEXT PRIMARY KEY,
-    		sum          DECIMAL NOT NULL DEFAULT 0,
-    		username     TEXT NOT NULL REFERENCES users(username),
-    		processed_at TIMESTAMP NOT NULL DEFAULT now()
-		)`,
-	}
-
-	for _, migration := range migrations {
-		if _, err := db.Exec(migration); err != nil {
-			return fmt.Errorf("failed to execute migration: %s %w", op, err)
-		}
-	}
-
-	return nil
 }
 
 func (s *Storage) Close() error {
@@ -336,16 +301,34 @@ func (s *Storage) Withdraw(ctx context.Context, username string, orderNum string
 	op := "storage.Withdraw"
 	s.log.Debug("withdrawing", slog.String("username", username), slog.String("order", orderNum), slog.Float64("sum", float64(sum)))
 
-	accrualSum, err := s.getAccrualSum(ctx, username)
+	tx, err := s.db.BeginTx(ctx, &sql.TxOptions{
+		Isolation: sql.LevelSerializable,
+	})
 	if err != nil {
 		return err
+	}
+	defer func() {
+		_ = tx.Rollback()
+	}()
+
+	var accrualSum float32
+	stmt, err := tx.Prepare("SELECT SUM(accrual) FROM orders WHERE username = $1")
+	if err != nil {
+		return fmt.Errorf("failed to prepare accural statement: %s %w", op, err)
+	}
+	defer func() {
+		_ = stmt.Close()
+	}()
+	row := stmt.QueryRowContext(ctx, username)
+	if err := row.Scan(&accrualSum); err != nil {
+		return fmt.Errorf("failed to scan accural row: %s %w", op, err)
 	}
 
 	if accrualSum < sum {
 		return ErrNotEnough
 	}
 
-	stmt, err := s.db.Prepare("INSERT INTO withdrawal (order_number, sum, username) VALUES ($1, $2, $3)")
+	stmt, err = tx.Prepare("INSERT INTO withdrawal (order_number, sum, username) VALUES ($1, $2, $3)")
 	if err != nil {
 		return fmt.Errorf("failed to prepare statement: %s %w", op, err)
 	}
@@ -362,8 +345,11 @@ func (s *Storage) Withdraw(ctx context.Context, username string, orderNum string
 		}
 		return fmt.Errorf("failed to execute statement: %s %w", op, err)
 	}
-	return nil
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("failed to commit transaction: %s %w", op, err)
+	}
 
+	return nil
 }
 
 func (s *Storage) GetWithdrawals(ctx context.Context, username string) ([]withdrawals.Withdrawal, error) {

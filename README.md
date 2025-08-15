@@ -5,9 +5,9 @@
 | конфигурация                            | env                    | флаг          | значение по умолчанию                                                     |
 |-----------------------------------------|------------------------|---------------|---------------------------------------------------------------------------|
 | хост:порт запуска приложения            | RUN_ADDRESS            | --a=host:port | localhost:8080                                                            |
-| хост:порт системы расчета скидок        | ACCRUAL_SYSTEM_ADDRESS | --d=host:port | localhost:8081                                                            |
+| хост:порт системы расчета скидок        | ACCRUAL_SYSTEM_ADDRESS | --r=host:port | localhost:8081                                                            |
 | окружение. Возможные значения prod, dev | ENV                    | --env         | dev                                                                       |
-| адрес подключения к базе данных         | DATABASE_URI           | --r           | postgresql://postgres:postgres@localhost:55432/gophermart?sslmode=disable |
+| адрес подключения к базе данных         | DATABASE_URI           | --d           | postgresql://postgres:postgres@localhost:55432/gophermart?sslmode=disable |
 
 
 Для генерации моков используется mockery - https://vektra.github.io/mockery/latest/

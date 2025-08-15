@@ -20,6 +20,11 @@ type Config struct {
 
 	AccrualSystemAddress string
 	DatabaseURI          string
+
+	HTTPClient struct {
+		Timeout  time.Duration
+		RetryMax int
+	}
 }
 
 func MustLoad() *Config {
@@ -46,7 +51,8 @@ func setDefaults(v *viper.Viper) {
 	v.SetDefault("server.idleTimeout", 60*time.Second)
 	v.SetDefault("databaseUri", "postgresql://postgres:postgres@localhost:55432/gophermart?sslmode=disable")
 	v.SetDefault("accrualSystemAddress", "http://localhost:8081")
-
+	v.SetDefault("httpClient.timeout", 5*time.Second)
+	v.SetDefault("httpClient.retryMax", 3)
 }
 
 func readEnvVariables(v *viper.Viper) {

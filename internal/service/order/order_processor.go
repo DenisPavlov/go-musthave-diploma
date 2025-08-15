@@ -81,9 +81,9 @@ func (s *Processor) ProcessNewOrders(ctx context.Context, batchSize int, workers
 
 			for _, order := range orders {
 				select {
-				case ordersChan <- order:
 				case <-ctx.Done():
 					return ctx.Err()
+				case ordersChan <- order:
 				}
 			}
 		}
@@ -113,6 +113,8 @@ func (s *Processor) getStatusWorker(ctx context.Context, ordersChan <-chan model
 		if err != nil {
 			if errors.Is(err, accrual.ErrOrderNotRegistered) {
 				s.log.DebugContext(ctx, "accrual order not registered", logger.Err(err))
+			} else if errors.Is(err, accrual.ErrRateLimit) {
+				s.log.DebugContext(ctx, "accrual order rate limit", logger.Err(err))
 			} else {
 				select {
 				case errChan <- err:
@@ -147,9 +149,9 @@ func (s *Processor) getStatusWorker(ctx context.Context, ordersChan <-chan model
 		}
 
 		select {
-		case doneChan <- order:
 		case <-ctx.Done():
 			return
+		case doneChan <- order:
 		}
 	}
 }

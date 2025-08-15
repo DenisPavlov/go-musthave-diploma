@@ -5,6 +5,9 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/DenisPavlov/go-musthave-diploma/internal/client/accrual"
 	"github.com/DenisPavlov/go-musthave-diploma/internal/config"
@@ -22,6 +25,8 @@ import (
 	ordersStorage "github.com/DenisPavlov/go-musthave-diploma/internal/storage"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/render"
+	"golang.org/x/sync/errgroup"
 )
 
 func main() {
@@ -49,6 +54,13 @@ func main() {
 		os.Exit(1)
 	}
 
+	router.Get("/api/orders/{val}", func(w http.ResponseWriter, r *http.Request) {
+		time.Sleep(1 * time.Second)
+		w.Header().Set("Retry-After", "10")
+		render.Status(r, http.StatusTooManyRequests)
+		render.PlainText(w, r, "hello")
+	})
+
 	router.Post("/api/user/register", register.New(log, storage))
 	router.Post("/api/user/login", login.New(log, storage))
 
@@ -68,12 +80,12 @@ func main() {
 	accrualClient := accrual.NewClient(log, cfg)
 	orderProcessor := order.NewProcessor(log, accrualClient, storage)
 
-	go func() {
-		if err = orderProcessor.ProcessNewOrders(context.Background(), 10, 5); err != nil {
-			log.Error("error processing orders", logger.Err(err))
-			os.Exit(1)
-		}
-	}()
+	appCtx, cancelApp := context.WithCancel(context.Background())
+
+	g, gCtx := errgroup.WithContext(appCtx)
+	g.Go(func() error {
+		return orderProcessor.ProcessNewOrders(gCtx, 10, 5)
+	})
 
 	// start server
 	log.Info("server starting", slog.String("address", cfg.RunAddress))
@@ -84,11 +96,34 @@ func main() {
 		WriteTimeout: cfg.Server.WriteTimeout,
 		IdleTimeout:  cfg.Server.IdleTimeout,
 	}
+	g.Go(func() error {
+		return srv.ListenAndServe()
+	})
 
-	if err := srv.ListenAndServe(); err != nil {
-		log.Error("failed to start server", logger.Err(err))
+	done := make(chan os.Signal, 1)
+	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+
+	g.Go(func() error {
+		select {
+		case sig := <-done:
+			defer cancelApp()
+			log.Info("received shutdown signal", slog.String("signal", sig.String()))
+			accrualClient.Shutdown()
+			if err := storage.Close(); err != nil {
+				log.Error("error closing storage", logger.Err(err))
+			}
+			if err := srv.Shutdown(appCtx); err != nil {
+				log.Error("failed to stop server", logger.Err(err))
+			}
+			log.Info("server stopped")
+			return nil
+		case <-gCtx.Done():
+			return nil
+		}
+	})
+
+	if err := g.Wait(); err != nil {
+		log.Error("error running service", logger.Err(err))
+		os.Exit(1)
 	}
-
-	// todo - add graceful shutdown
-
 }
