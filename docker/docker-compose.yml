@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:14.5-alpine
+    ports:
+      - "55432:5432"
+    volumes:
+      - postgres_storage:/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    environment:
+      POSTGRES_PASSWORD: postgres
+
+volumes:
+  postgres_storage:
+
+networks:
+  default:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.216.0.0/24
